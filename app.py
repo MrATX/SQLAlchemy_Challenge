@@ -8,9 +8,7 @@ from sqlalchemy import create_engine, func
 
 from flask import Flask, jsonify
 
-#################################################
 # Database Setup
-#################################################
 engine = create_engine("sqlite:///Resources/hawaii.sqlite")
 
 # reflect an existing database into a new model
@@ -22,25 +20,21 @@ Base.prepare(engine, reflect=True)
 Measurement = Base.classes.measurement
 Station = Base.classes.station
 
-#################################################
 # Flask Setup
-#################################################
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
-#################################################
 # Flask Routes
-#################################################
 @app.route("/")
 def welcome():
     """List all available api routes."""
     return (
         f"Available Routes:<br/>"
-        f"<a href='/api/v1.0/precipitation'>Precipitation</a><br/>"
-        f"<a href='/api/v1.0/stations'>Stations</a><br/>"
-        f"<a href='/api/v1.0/tobs'>Temperature</a><br/>"
-        f"<a href='/api/v1.0/20170225'>Vaca Day 1 - 2/25</a><br/>"
-        f"<a href='/api/v1.0/2017-02-25/2017-03-4'>Whole Vaca 2/25 - 3/4</a><br/>"
+        f"<a href='/api/v1.0/precipitation'>Precipitation (in) - Last 12 Months</a><br/>"
+        f"<a href='/api/v1.0/stations'>Stations List</a><br/>"
+        f"<a href='/api/v1.0/tobs'>Daily Temperature - Last 12 Months</a><br/>"
+        f"<a href='/api/v1.0/20170225'>Vaca Day 1 (2/25) - on</a><br/>"
+        f"<a href='/api/v1.0/20170225/20170304'>Whole Vaca 2/25 - 3/4</a><br/>"
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -48,11 +42,7 @@ def precipitation():
     session = Session(engine)
     #Determine most recent date and date of one year ago
     last_date = session.query(Measurement,Measurement.date).order_by(Measurement.date.desc()).first()
-    last_date_yr = last_date[1][0:4]
-    last_date_mo = last_date[1][5:7]
-    last_date_day = last_date[1][8:10]
-    last_date = dt.datetime(int(last_date_yr),int(last_date_mo),int(last_date_day))
-    year_ago = dt.datetime((int(last_date_yr)-1),int(last_date_mo),int(last_date_day))
+    year_ago = dt.datetime((int(last_date[1][0:4])-1),int(last_date[1][5:7]),int(last_date[1][8:10]))
 
     results = session.query(Measurement.date,func.avg(Measurement.prcp)).filter(Measurement.date>year_ago).group_by(Measurement.date).order_by(Measurement.date.desc()).all()
 
@@ -86,11 +76,7 @@ def tobs():
     most_active_stat = results[0][0]
     #Determine most recent date and date of one year ago
     last_date = session.query(Measurement,Measurement.date).order_by(Measurement.date.desc()).first()
-    last_date_yr = last_date[1][0:4]
-    last_date_mo = last_date[1][5:7]
-    last_date_day = last_date[1][8:10]
-    last_date = dt.datetime(int(last_date_yr),int(last_date_mo),int(last_date_day))
-    year_ago = dt.datetime((int(last_date_yr)-1),int(last_date_mo),int(last_date_day))
+    year_ago = dt.datetime((int(last_date[1][0:4])-1),int(last_date[1][5:7]),int(last_date[1][8:10]))
     #Query for last 12 months of temp observations
     results = session.query(Measurement.date,Measurement.tobs).\
         filter(Measurement.date>year_ago).\
@@ -108,10 +94,7 @@ def tobs():
 
 @app.route("/api/v1.0/<string:vaca_start>")
 def vaca_start(vaca_start):
-    yr = vaca_start[0:4]
-    mo = vaca_start[4:6]
-    day = vaca_start[6:8]
-    vaca_start = (f"{yr}-{mo}-{day}")
+    vaca_start = (f"{vaca_start[0:4]}-{vaca_start[4:6]}-{vaca_start[6:8]}")
     session = Session(engine)
     sel = [
         Measurement.date,
@@ -120,7 +103,7 @@ def vaca_start(vaca_start):
         func.max(Measurement.tobs)
     ]
     results = session.query(*sel).\
-        filter(Measurement.date==vaca_start).\
+        filter(Measurement.date>=vaca_start).\
         order_by(Measurement.date).\
         group_by(Measurement.date).all()
     
@@ -138,14 +121,36 @@ def vaca_start(vaca_start):
 
     return jsonify(all_results)
 
-#@app.route("/api/v1.0/<string:vaca_start>/<string:vaca_end>")
-#def tobs():
-    #session = Session(engine)
+@app.route("/api/v1.0/<string:vaca_start>/<string:vaca_end>")
+def vaca_range(vaca_start,vaca_end):
+    vaca_start = (f"{vaca_start[0:4]}-{vaca_start[4:6]}-{vaca_start[6:8]}")
+    vaca_end = (f"{vaca_end[0:4]}-{vaca_end[4:6]}-{vaca_end[6:8]}")
+    session = Session(engine)
+    sel = [
+        Measurement.date,
+        func.min(Measurement.tobs),
+        func.avg(Measurement.tobs),
+        func.max(Measurement.tobs)
+    ]
+    results = session.query(*sel).\
+        filter(Measurement.date>=vaca_start).\
+        filter(Measurement.date<=vaca_end).\
+        order_by(Measurement.date).\
+        group_by(Measurement.date).all()
 
+    session.close()
+
+    all_results = []
+    for item in results:
+        item_dict = {
+            "Date":item[0],
+            "Min Temp":item[1],
+            "Avg Temp":item[2],
+            "Max Temp":item[3],
+        }
+        all_results.append(item_dict)
+
+    return jsonify(all_results)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
