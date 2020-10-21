@@ -1,0 +1,47 @@
+
+  #div {
+    border: .5px lightslategray dotted;
+  }
+
+  div{
+    border:none;
+  }
+  
+  .page-header{
+    margin-top:0px;
+    margin-bottom:20px;
+    border-style:none;
+    color:teal;
+  }
+  
+  .dropdown-item{
+    color:teal;
+  }
+  
+  #navolink{
+    color:teal;
+  }
+  
+  #indexlink{
+    color:maroon;
+  }
+
+  #repolink{
+    background-color:teal;
+    color:white;
+    text-align:center;
+  }
+
+  .col-md-3{
+    background-color: black;
+    border:none;
+  }
+
+  .jumbotron{
+    margin:25px;
+  }
+
+  #analysispara{
+    margin:25px;
+    font-size: x-large;
+  }
